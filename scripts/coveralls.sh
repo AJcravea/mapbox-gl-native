@@ -14,10 +14,10 @@ mapbox_time "check_mason_lcov" \
 command -v $LCOV > /dev/null 2>&1 || exit 1
 
 mapbox_time "remove_coverage_info" \
-rm -f "build/${HOST_SLUG}/${BUILDTYPE}/coverage.info"
+rm -f "build/${PLATFORM_SLUG}/${BUILDTYPE}/coverage.info"
 
 # Run all unit tests
-./scripts/run_tests.sh "build/${HOST_SLUG}/${BUILDTYPE}/test"
+./scripts/run_tests.sh "build/${PLATFORM_SLUG}/${BUILDTYPE}/test"
 
 # Collect coverage data and save it into coverage.info
 mapbox_time "lcov_capture" \
@@ -29,9 +29,9 @@ $LCOV \
     --directory "src/mbgl" \
     --directory "platform" \
     --directory "include/mbgl" \
-    --directory "build/${HOST_SLUG}/${BUILDTYPE}" \
-    --base-directory "build/${HOST_SLUG}/${BUILDTYPE}" \
-    --output-file "build/${HOST_SLUG}/${BUILDTYPE}/coverage.info"
+    --directory "build/${PLATFORM_SLUG}/${BUILDTYPE}" \
+    --base-directory "build/${PLATFORM_SLUG}/${BUILDTYPE}" \
+    --output-file "build/${PLATFORM_SLUG}/${BUILDTYPE}/coverage.info"
 
 mapbox_time "coveralls_upload" \
-coveralls-lcov "build/${HOST_SLUG}/${BUILDTYPE}/coverage.info"
+coveralls-lcov "build/${PLATFORM_SLUG}/${BUILDTYPE}/coverage.info"

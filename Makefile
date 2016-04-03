@@ -1,23 +1,15 @@
 export BUILDTYPE ?= Release
-export BUILD_TEST ?= 1
-export BUILD_RENDER ?= 1
-export BUILD_OFFLINE ?= 1
 export ENABLE_COVERAGE ?= 0
 
-# Determine build platform
 ifeq ($(shell uname -s), Darwin)
-export BUILD = osx
-export JOBS ?= $(shell sysctl -n hw.ncpu)
+  export JOBS ?= $(shell sysctl -n hw.ncpu)
 else ifeq ($(shell uname -s), Linux)
-export BUILD = linux
-export JOBS ?= $(shell grep --count processor /proc/cpuinfo)
+  export JOBS ?= $(shell grep --count processor /proc/cpuinfo)
 else
-$(error Cannot determine build platform)
+  $(error Cannot determine host platform)
 endif
 
-export BUILD_VERSION = $(shell uname -m)
-
-RUN =  +$(MAKE) -f scripts/main.mk
+RUN = +$(MAKE) -f scripts/main.mk
 
 default:
 	@printf "You must specify a valid target\n"
@@ -26,19 +18,15 @@ default:
 
 .PHONY: osx
 osx:
-	$(RUN) HOST=osx HOST_VERSION=x86_64 Xcode/osxapp
-
-.PHONY: run-osx
-run-osx: osx
-	"gyp/build/$(BUILDTYPE)/Mapbox GL.app/Contents/MacOS/Mapbox GL"
+	$(RUN) PLATFORM=osx Xcode/osxapp
 
 .PHONY: Xcode/osx
 Xcode/osx:
-	$(RUN) HOST=osx HOST_VERSION=x86_64 Xcode/__project__
+	$(RUN) PLATFORM=osx Xcode/__project__
 
 .PHONY: xproj
 xproj: Xcode/osx
-	open ./build/osx-x86_64/gyp/osx.xcodeproj
+	open ./build/osx-x86_64/platform/osx/platform.xcodeproj
 
 .PHONY: xpackage
 xpackage: Xcode/osx
@@ -48,35 +36,31 @@ xpackage: Xcode/osx
 xpackage-strip: Xcode/osx
 	./platform/osx/scripts/package.sh strip
 
-.PHONY: xtest
-xtest:
-	$(RUN) HOST=osx HOST_VERSION=x86_64 Xcode/test
-
 .PHONY: xctest
 xctest: Xcode/osx
 	./platform/osx/scripts/test.sh
 
 #### iOS targets ##############################################################
 
+.PHONY: ios
+ios:
+	$(RUN) PLATFORM=ios XCODEBUILD_ARGS='-sdk iphoneos ARCHS="arm64 armv7 armv7s"' Xcode/iosapp
+
+.PHONY: isim
+isim:
+	$(RUN) PLATFORM=ios XCODEBUILD_ARGS='-sdk iphonesimulator ARCHS="x86_64 i386"' Xcode/iosapp
+
 .PHONY: Xcode/ios
 Xcode/ios:
-	$(RUN) HOST=ios Xcode/__project__
+	$(RUN) PLATFORM=ios Xcode/__project__
 
 .PHONY: iproj
 iproj: Xcode/ios
 	open ./build/ios-all/gyp/ios.xcodeproj
 
-.PHONY: ios
-ios:
-	$(RUN) HOST=ios XCODEBUILD_ARGS='-sdk iphoneos ARCHS="arm64 armv7 armv7s"' Xcode/iosapp
-
-.PHONY: isim
-isim:
-	$(RUN) HOST=ios XCODEBUILD_ARGS='-sdk iphonesimulator ARCHS="x86_64 i386"' Xcode/iosapp
-
 .PHONY: ibench
 ibench:
-	$(RUN) HOST=ios XCODEBUILD_ARGS='-sdk iphoneos ARCHS="arm64"' Xcode/ios-bench
+	$(RUN) PLATFORM=ios XCODEBUILD_ARGS='-sdk iphoneos ARCHS="arm64"' Xcode/ios-bench
 
 .PHONY: ipackage
 ipackage: Xcode/ios
@@ -114,34 +98,15 @@ itest: ipackage-sim
 idocument:
 	OUTPUT=$(OUTPUT) ./platform/ios/scripts/document.sh
 
-#### Linux targets #####################################################
-
-.PHONY: linux
-linux:
-	$(RUN) Makefile/linuxapp
-
-.PHONY: nlinux
-nlinux:
-	$(RUN) Ninja/linuxapp
-
-.PHONY: run-linux
-run-linux: linux
-	(cd build/$(BUILD)-$(BUILD_VERSION)/$(BUILDTYPE) && ./mapbox-gl)
-
-.PHONY: run-valgrind-linux
-run-valgrind-linux: linux
-	(cd build/$(BUILD)-$(BUILD_VERSION)/$(BUILDTYPE) && valgrind --leak-check=full --suppressions=../../../scripts/valgrind.sup ./mapbox-gl)
-
 #### Android targets #####################################################
 
 # Builds a particular android architecture.
 android-lib-%:
-	$(RUN) HOST=android HOST_VERSION=$* Makefile/androidapp
+	$(RUN) PLATFORM=android SUBPLATFORM=$* Makefile/all
 
 # Builds the default Android library
 .PHONY: android-lib
-android-lib:
-	$(RUN) HOST=android Makefile/androidapp
+android-lib: android-lib-arm-v7
 
 # Builds the selected/default Android library
 .PHONY: android
@@ -155,25 +120,44 @@ apackage: android-lib-arm-v5 android-lib-arm-v7 android-lib-arm-v8 android-lib-x
 
 #### Node targets #####################################################
 
-# Builds the Node.js library
-.PHONY: node
-node:
-	$(RUN) LOOP=uv HTTP=none ASSET=none Makefile/node
+node_modules: package.json
+	npm update # Install dependencies but don't run our own install script.
 
-.PHONY: Xcode/node
-Xcode/node:
-	$(RUN) LOOP=uv HTTP=none ASSET=none Xcode/node
+.PHONY: node
+node: node_modules
+	$(RUN) PLATFORM=node Makefile/node
 
 .PHONY: xnode
-xnode: Xcode/node
+xnode:
+	$(RUN) Xcode/node
+	./platform/node/scripts/create_node_scheme.sh "node test" "`npm bin tape`/tape platform/node/test/js/**/*.test.js"
+	./platform/node/scripts/create_node_scheme.sh "npm run test-suite" "platform/node/test/render.test.js"
 	open ./build/binding.xcodeproj
 
-.PHONY: nproj
-nproj:
-	$(RUN) LOOP=uv HTTP=none ASSET=none node/xproj
-	open ./build/binding.xcodeproj
+.PHONY: test-node
+test-node: node
+	npm test
+	npm run test-suite
 
 #### Miscellaneous targets #####################################################
+
+.PHONY: linux
+linux: glfw-app render offline
+
+.PHONY: test-linux
+test-linux: test-*
+
+.PHONY: glfw-app
+glfw-app:
+	$(RUN) Makefile/glfw-app
+
+.PHONY: run-glfw-app
+run-glfw-app:
+	$(RUN) run-glfw-app
+
+.PHONY: run-valgrind-glfw-app
+run-valgrind-glfw-app:
+	$(RUN) run-valgrind-glfw-app
 
 .PHONY: test
 test:
@@ -197,10 +181,6 @@ render:
 offline:
 	$(RUN) Makefile/mbgl-offline
 
-.PHONY: config
-config:
-	$(RUN) config
-
 # Generates a compilation database with ninja for use in clang tooling
 .PHONY: compdb
 compdb:
@@ -210,32 +190,14 @@ compdb:
 tidy:
 	$(RUN) tidy
 
-.PHONY: clear_xcode_cache
-clear_xcode_cache:
-ifeq ($(BUILD), osx)
-	@CUSTOM_DD=`defaults read com.apple.dt.Xcode IDECustomDerivedDataLocation 2>/dev/null`; \
-	if [ $$CUSTOM_DD ]; then \
-		echo clearing files in $$CUSTOM_DD older than one day; \
-		find $$CUSTOM_DD/mapboxgl-app-* -mtime +1 | xargs rm -rf; \
-		find $$CUSTOM_DD/osxapp-* -mtime +1 | xargs rm -rf; \
-	fi; \
-	if [ -d ~/Library/Developer/Xcode/DerivedData/ ] && [ ! $$CUSTOM_DD ]; then \
-		echo 'clearing files in ~/Library/Developer/Xcode/DerivedData/{mapboxgl-app,osxapp}-* older than one day'; \
-		find ~/Library/Developer/Xcode/DerivedData/mapboxgl-app-* -mtime +1 | xargs rm -rf; \
-		find ~/Library/Developer/Xcode/DerivedData/osxapp-* -mtime +1 | xargs rm -rf; \
-	fi
-endif
-
-clean: clear_xcode_cache
+clean:
 	-find ./deps/gyp -name "*.pyc" -exec rm {} \;
 	-find ./build -type f -not -path '*/*.xcodeproj/*' -exec rm {} \;
-	-rm -rf ./gyp/build/
-	-rm -rf ./config/*.gypi
-	-rm -rf ./platform/android/MapboxGLAndroidSDK/build \
+	-rm -rf ./platform/*/build/ \
+	        ./platform/android/MapboxGLAndroidSDK/build \
 	        ./platform/android/MapboxGLAndroidSDKTestApp/build \
 	        ./platform/android/MapboxGLAndroidSDK/src/main/jniLibs \
 	        ./platform/android/MapboxGLAndroidSDKTestApp/src/main/jniLibs \
-	        ./platform/android/MapboxGLAndroidSDK/src/main/obj.target \
 	        ./platform/android/MapboxGLAndroidSDK/src/main/assets
 
 distclean: clean

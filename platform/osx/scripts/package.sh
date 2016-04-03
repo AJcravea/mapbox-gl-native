@@ -23,7 +23,7 @@ trap finish EXIT
 step "Creating build files..."
 export MASON_PLATFORM=osx
 export BUILDTYPE=${BUILDTYPE:-Release}
-export HOST=osx
+export PLATFORM=osx
 make Xcode/osx
 
 VERSION=${TRAVIS_JOB_NUMBER:-${BITRISE_BUILD_NUMBER:-0}}
@@ -34,23 +34,7 @@ xcodebuild -sdk macosx${OSX_SDK_VERSION} \
     ONLY_ACTIVE_ARCH=NO \
     GCC_GENERATE_DEBUGGING_SYMBOLS=${GCC_GENERATE_DEBUGGING_SYMBOLS} \
     CURRENT_PROJECT_VERSION=${VERSION} \
-    -project ./build/osx-x86_64/gyp/osx.xcodeproj \
+    -project ./build/osx-x86_64/platform/osx/platform.xcodeproj \
     -configuration ${BUILDTYPE} \
     -target osxsdk \
     -jobs ${JOBS}
-
-TARGET_BUILD_DIR=gyp/build/${BUILDTYPE}
-INFOPLIST_PATH=Mapbox.framework/Versions/Current/Resources/Info.plist
-
-# Uncomment when we're ready to release an official version.
-#VERSION=$( git tag | grep ^osx | sed 's/^osx-//' | sort -r | grep -v '\-rc.' | grep -v '\-pre.' | sed -n '1p' | sed 's/^v//' )
-#if [ "$VERSION" ]; then
-#    plutil \
-#        -replace CFBundleShortVersionString -string ${VERSION} \
-#        $TARGET_BUILD_DIR/$INFOPLIST_PATH
-#    plutil \
-#        -replace CFBundleVersion -string ${VERSION} \
-#        $TARGET_BUILD_DIR/$INFOPLIST_PATH
-#fi
-
-echo $TARGET_BUILD_DIR/Mapbox.framework

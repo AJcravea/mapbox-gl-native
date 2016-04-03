@@ -22,25 +22,17 @@ workflows:
             else
                 envman add --key SKIPCI --value false
             fi
-    - select-xcode-version:
-        title: Select Xcode version
-        run_if: '{{enveq "SKIPCI" "false"}}'
     - script:
         title: Run build script
         run_if: '{{enveq "SKIPCI" "false"}}'
         inputs:
         - content: |-
             #!/bin/bash
-            export TRAVIS_OS_NAME=osx
-            export TRAVIS_TAG=$BITRISE_GIT_TAG
-            export TRAVIS_JOB_NUMBER=$BITRISE_BUILD_NUMBER
-            export NODE_VERSION=4
-            export CXX=clang++
-            export CC=clang
-            source ./scripts/set_compiler.sh
-            ./platform/node/scripts/install.sh
-            ./platform/node/scripts/run.sh
-            ./platform/node/scripts/after_script.sh
+            brew install awscli
+            nvm use 4
+            make node
+            make test-node
+            ./platform/node/scripts/after_script.sh $BITRISE_GIT_TAG $BITRISE_BUILD_NUMBER
     - slack:
         title: Post to Slack
         run_if: '{{enveq "SKIPCI" "false"}}'

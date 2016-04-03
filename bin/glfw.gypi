@@ -1,8 +1,8 @@
 {
   'targets': [
     {
-      'target_name': 'mbgl-render',
-      'product_name': 'mbgl-render',
+      'target_name': 'glfw-app',
+      'product_name': 'mapbox-glfw',
       'type': 'executable',
 
       'dependencies': [
@@ -11,26 +11,36 @@
       ],
 
       'include_dirs': [
+        '../platform/default',
         '../include',
         '../src',
       ],
 
       'sources': [
-        'render.cpp',
+        'glfw.cpp',
+        '../platform/default/settings_json.cpp',
+        '../platform/default/glfw_view.hpp',
+        '../platform/default/glfw_view.cpp',
+        '../platform/default/log_stderr.cpp',
       ],
 
       'cflags_cc': [
+        '<@(glfw_cflags)',
+        '<@(variant_cflags)',
         '<@(boost_cflags)',
       ],
 
       'link_settings': {
         'libraries': [
-          '<@(boost_libprogram_options_static_libs)'
+          '<@(glfw_static_libs)',
+          '<@(glfw_ldflags)',
         ],
       },
 
       'xcode_settings': {
         'OTHER_CPLUSPLUSFLAGS': [
+          '<@(glfw_cflags)',
+          '<@(variant_cflags)',
           '<@(boost_cflags)',
         ],
       }

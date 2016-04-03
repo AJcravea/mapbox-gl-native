@@ -3,21 +3,8 @@
 set -e
 set -o pipefail
 
-if [ `uname -s` = 'Darwin' ]; then HOST=${HOST:-osx} ; else HOST=${HOST:-linux} ; fi
-
 CMD=$@
 shift
-
-# allow writing core files
-ulimit -c unlimited -S
-echo 'ulimit -c: '`ulimit -c`
-if [ -f /proc/sys/kernel/core_pattern ]; then
-    echo '/proc/sys/kernel/core_pattern: '`cat /proc/sys/kernel/core_pattern`
-fi
-
-if [[ ${TRAVIS_OS_NAME} == "linux" ]]; then
-    sysctl kernel.core_pattern
-fi
 
 # install test server dependencies
 if [ ! -d "test/node_modules/express" ]; then
