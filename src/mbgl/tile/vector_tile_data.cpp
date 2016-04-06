@@ -188,12 +188,14 @@ void VectorTileData::redoPlacement(const std::function<void()>& callback) {
 void VectorTileData::queryRenderedFeatures(
         std::unordered_map<std::string, std::vector<std::string>>& result,
         const GeometryCollection& queryGeometry,
-        double scale) {
-    if (!featureIndex || !geometryTile) {
-        return;
-    }
+        const double bearing,
+        const double scale) {
 
-    featureIndex->query(result, queryGeometry, scale, *geometryTile);
+    if (state != State::parsed) return;
+    assert(featureIndex);
+    assert(geometryTile);
+
+    featureIndex->query(result, queryGeometry, bearing, scale, *geometryTile, style);
 }
 
 void VectorTileData::cancel() {

@@ -113,6 +113,15 @@ inline S unit(const S& a) {
     return a * (1 / magnitude);
 }
 
+template <typename T, typename S = double>
+inline T rotate(const T& a, S angle) {
+    S cos = std::cos(angle);
+    S sin = std::sin(angle);
+    S x = cos * a.x - sin * a.y;
+    S y = sin * a.x + cos * a.y;
+    return T(x, y);
+}
+
 template <typename T>
 T clamp(T value, T min_, T max_) {
     return max(min_, min(max_, value));

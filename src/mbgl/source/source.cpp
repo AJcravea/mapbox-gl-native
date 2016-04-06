@@ -491,7 +491,10 @@ struct TileQuery {
     double scale;
 };
 
-std::unordered_map<std::string, std::vector<std::string>> Source::queryRenderedFeatures(const std::vector<TileCoordinate>& queryGeometry, double zoom) {
+std::unordered_map<std::string, std::vector<std::string>> Source::queryRenderedFeatures(
+        const std::vector<TileCoordinate>& queryGeometry,
+        const double zoom,
+        const double bearing) {
 
     std::unordered_map<std::string, std::vector<std::string>> result;
 
@@ -538,7 +541,7 @@ std::unordered_map<std::string, std::vector<std::string>> Source::queryRenderedF
 
     for (auto& it : tileQueries) {
         auto& tileQuery = std::get<1>(it);
-        tileQuery.tile->data->queryRenderedFeatures(result, tileQuery.queryGeometry, tileQuery.scale);
+        tileQuery.tile->data->queryRenderedFeatures(result, tileQuery.queryGeometry, tileQuery.scale, bearing);
     }
 
     return result;
