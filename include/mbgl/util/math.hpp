@@ -88,6 +88,14 @@ inline T dist(const S1& a, const S2& b) {
     return c;
 }
 
+template <typename T, typename S1, typename S2>
+inline T distSqr(const S1& a, const S2& b) {
+    T dx = b.x - a.x;
+    T dy = b.y - a.y;
+    T c = dx * dx + dy * dy;
+    return c;
+}
+
 template <typename T>
 inline T round(const T& a) {
     return T(::round(a.x), ::round(a.y));

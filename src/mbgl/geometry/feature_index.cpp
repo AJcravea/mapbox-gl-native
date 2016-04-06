@@ -99,7 +99,7 @@ void FeatureIndex::query(
         if (!styleLayer) continue;
 
         auto geometries = getGeometries(*feature);
-        styleLayer->queryIntersectsGeometry(queryGeometry, geometries, bearing, pixelsToTileUnits);
+        if (!styleLayer->queryIntersectsGeometry(queryGeometry, geometries, bearing, pixelsToTileUnits)) continue;
 
         auto& layerResult = result[bucketName];
 
